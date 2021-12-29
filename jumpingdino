@@ -1,0 +1,239 @@
+#include <LiquidCrystal.h>
+#include <arduino-timer.h>
+
+LiquidCrystal lcd(12,11,2,3,4,5);
+
+const int buzzer = 6; 
+const int button = 8; 
+int buttonStat = 0; 
+int dinoFila = 1; 
+int cactusColumna = 17; 
+int graficoDino = 0; 
+int velocidadCactus = 500; 
+int score = 0; 
+bool puedeSaltar = true; 
+bool gameover = false; 
+
+Timer<2, millis>timerDino;
+Timer<1,millis>timerCactus;
+
+void gameOver(){
+  lcd.setCursor(3,0);
+  lcd.print("GAME OVER");
+  melodiaGameOver();
+  delay(2000);
+  lcd.setCursor(0,1);
+  lcd.print("PULSA PARA JUGAR");
+  esperaBoton(8);
+  melodiaStart();
+  reinicio();
+}
+
+void juego(){
+  timerDino.tick();
+  timerCactus.tick();
+  lcd.setCursor(1,dinoFila);
+  lcd.write((byte)graficoDino);
+  lcd.setCursor(cactusColumna,1);
+  lcd.write((byte)2);
+  lcd.setCursor(14,0);
+  lcd.print(score);
+  if (dinoFila == 1 & cactusColumna == 1){
+    lcd.clear();
+    gameover = true;
+   }
+  buttonStat = digitalRead(button);
+  if (buttonStat == HIGH & puedeSaltar){
+          salto();
+          timerDino.in(1000,salto);
+    }
+  if (score == 21){
+    lcd.clear();
+    lcd.setCursor(3,0);
+    lcd.print("HAS GANADO");
+    melodiaWin();
+    delay(2000);
+    lcd.setCursor(0,1);
+    lcd.print("PULSA PARA JUGAR");
+    esperaBoton(8);
+    melodiaStart();
+    reinicio();
+  }
+  timerCactus.in(velocidadCactus,spawnCactus);
+}
+
+void reinicio(){
+  dinoFila = 1;
+  cactusColumna = 17;
+  graficoDino = 0;
+  velocidadCactus = 500;
+  score = 0;
+  gameover = false;
+  lcd.clear();
+}
+
+void salto(){
+    lcd.clear();
+    if(dinoFila == 1){
+      dinoFila = 0;
+      graficoDino = 1;
+      melodiaSalto();
+      puedeSaltar = false;
+      timerDino.in(1500, 
+      [](void)->bool{puedeSaltar = true;});
+    }else{
+     dinoFila = 1;
+     graficoDino = 0;
+  }
+}
+
+void spawnCactus(){
+  lcd.clear();
+  if(cactusColumna==0){
+    cactusColumna=17;
+    ++score;
+    velocidadCactus -= 20;
+  }else{
+    --cactusColumna;
+  }
+}
+
+void esperaBoton(int pinboton){
+  int estadoBoton = 0;
+  while(1){
+    estadoBoton = digitalRead(pinboton);
+    if (estadoBoton == HIGH){
+      return;
+    }
+  }
+}
+
+void melodiaSalto(){
+    tone(buzzer, 150);
+    delay(50);
+    tone(buzzer,400);
+    delay(50); 
+    noTone(buzzer);
+    delay(20);
+    tone(buzzer,400);
+    delay(50);  
+    noTone(buzzer);
+    delay(20);
+    tone(buzzer,400);
+    delay(50);
+    noTone(buzzer);
+  }
+
+
+
+void melodiaStart(){
+  tone(buzzer, 988);
+  delay(125);
+  tone(buzzer, 1976);
+  delay(125);
+  tone(buzzer, 1480);
+  delay(125);
+  tone(buzzer, 1300);
+  delay(125);
+  tone(buzzer, 1976);
+  delay(62);
+  tone(buzzer, 1397);
+  delay(93);
+  noTone(buzzer);
+  delay(50);
+  tone(buzzer, 1319);
+  delay(250);
+  noTone(buzzer);
+}
+
+void melodiaWin(){
+  tone(buzzer, 480);
+  delay(150);
+  tone(buzzer, 587);
+  delay(150);
+  tone(buzzer, 698);
+  delay(150);
+  tone(buzzer, 970);
+  delay(150);
+  tone(buzzer, 1175);
+  delay(150);
+  tone(buzzer, 1397);
+  delay(150);
+  tone(buzzer, 1950);
+  delay(500);
+  noTone(buzzer);
+}
+
+void melodiaGameOver(){
+  tone(buzzer, 440);
+  delay(150);
+  tone(buzzer, 350);
+  delay(150);
+  tone(buzzer, 294);
+  delay(150);
+  tone(buzzer, 392);
+  delay(150);
+  tone(buzzer, 330);
+  delay(150);
+  tone(buzzer, 294);
+  delay(150);
+  noTone(buzzer);
+}
+
+byte dino1[8] = {
+  0b00000011,
+  0b00000011,
+  0b00000010,
+  0b00000010,
+  0b00001110,
+  0b00001110,
+  0b00001110,
+  0b00001010,
+};
+
+byte dino2[8] = {
+  0b00000011,
+  0b00000011,
+  0b00000010,
+  0b00000010,
+  0b00001110,
+  0b00001110,
+  0b00001110,
+  0b00010001,
+};
+
+byte cactus[8] = {
+  0b00000000,
+  0b00000100,
+  0b00001100,
+  0b00001100,
+  0b00000110,
+  0b00000110,
+  0b00000100,
+  0b00000100,
+};
+
+void setup(){
+  lcd.begin(16,2);
+  lcd.createChar(0,dino1);
+  lcd.createChar(1,dino2);
+  lcd.createChar(2,cactus);
+  pinMode(buzzer, OUTPUT); 
+  pinMode(button, INPUT);
+  lcd.clear();
+  lcd.setCursor(2,0);
+  lcd.print("JUMPING DINO");
+  lcd.setCursor(0,1);
+  lcd.print("PULSA PARA JUGAR");
+  esperaBoton(8);
+  melodiaStart();
+  lcd.clear();
+
+}
+
+void loop(){
+  while (!gameover){
+    juego();
+    }
+  gameOver(); 
+}       
